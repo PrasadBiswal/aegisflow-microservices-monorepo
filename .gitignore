@@ -1,0 +1,15 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment & Secrets
+.env
+*.pem
+secrets.yaml
+
+# IDE & Build artifacts
+.vscode/
+.idea/
+dist/
+build/
+node_modules/
