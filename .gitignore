@@ -4,6 +4,8 @@ Thumbs.db
 
 # Environment & Secrets
 .env
+.env.*
+!.env.example
 *.pem
 secrets.yaml
 
@@ -13,3 +15,15 @@ secrets.yaml
 dist/
 build/
 node_modules/
+
+# .NET build output
+bin/
+obj/
+
+# Terraform
+# (.terraform.lock.hcl is intentionally NOT ignored: commit it to pin provider versions)
+.terraform/
+*.tfstate*
+*.tfvars
+*.tfvars.json
+crash.log

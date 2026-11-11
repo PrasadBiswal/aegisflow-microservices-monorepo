@@ -1,0 +1,29 @@
+# Git and version control
+**/.git
+**/.gitignore
+**/.github
+
+# Visual Studio & VS Code workspace files
+**/.vs
+**/.vscode
+**/*.user
+
+# Tests and tooling (not needed inside service images)
+tests/
+.config/
+
+# .NET Build artifacts & outputs
+**/bin/
+**/obj/
+**/publish/
+**/TestResults/
+
+# Infrastructure & Kubernetes code (not needed inside microservice images)
+**/terraform/
+**/charts/
+
+# Documentation and logs
+**/*.md
+**/*.log
+.env
+*.env

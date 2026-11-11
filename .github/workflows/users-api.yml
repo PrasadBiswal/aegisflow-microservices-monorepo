@@ -1,0 +1,33 @@
+name: CI - users-api
+
+on:
+  push:
+    branches: [ "dev", "main" ]
+    paths:
+      - 'services/users-api/**'
+      - 'tests/users-api.Tests/**'
+      - 'libs/**'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'Dockerfile'
+      - '.github/workflows/users-api.yml'
+      - '.github/workflows/_ci-reusable.yml'
+  pull_request:
+    branches: [ "dev", "main" ]
+    paths:
+      - 'services/users-api/**'
+      - 'tests/users-api.Tests/**'
+      - 'libs/**'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'Dockerfile'
+      - '.github/workflows/users-api.yml'
+      - '.github/workflows/_ci-reusable.yml'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_ci-reusable.yml
+    with:
+      service-name: users-api

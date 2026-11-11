@@ -1,0 +1,33 @@
+name: CI - reviews-api
+
+on:
+  push:
+    branches: [ "dev", "main" ]
+    paths:
+      - 'services/reviews-api/**'
+      - 'tests/reviews-api.Tests/**'
+      - 'libs/**'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'Dockerfile'
+      - '.github/workflows/reviews-api.yml'
+      - '.github/workflows/_ci-reusable.yml'
+  pull_request:
+    branches: [ "dev", "main" ]
+    paths:
+      - 'services/reviews-api/**'
+      - 'tests/reviews-api.Tests/**'
+      - 'libs/**'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'Dockerfile'
+      - '.github/workflows/reviews-api.yml'
+      - '.github/workflows/_ci-reusable.yml'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_ci-reusable.yml
+    with:
+      service-name: reviews-api

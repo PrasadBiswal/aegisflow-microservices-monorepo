@@ -1,0 +1,290 @@
+{
+  "info": {
+    "_postman_id": "5f0f6c1e-2c7a-4b8e-9a51-3d2f7f1c9a10",
+    "name": "AegisFlow API",
+    "description": "Endpoint tests for the AegisFlow services. Run the folders top to bottom (requests depend on earlier ones). Use the 'AegisFlow - local' environment for Docker Compose; an 'aws' environment is added in Phase 4.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "users-api",
+      "item": [
+        {
+          "name": "Service info",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('identifies the service', () => pm.expect(pm.response.json().service).to.eql('users-api'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{usersApiUrl}}/"
+          }
+        },
+        {
+          "name": "Liveness",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{usersApiUrl}}/health/live"
+          }
+        },
+        {
+          "name": "Readiness (database reachable)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{usersApiUrl}}/health/ready"
+          }
+        },
+        {
+          "name": "Create user",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// A new email on every run, so the collection can be run again and again.",
+                  "pm.collectionVariables.set('userEmail', `user-${Date.now()}@example.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('sets the Location header', () => pm.response.to.have.header('Location'));",
+                  "const body = pm.response.json();",
+                  "pm.test('returns the new user', () => {",
+                  "  pm.expect(body.id).to.be.a('string');",
+                  "  pm.expect(body.email).to.eql(pm.collectionVariables.get('userEmail'));",
+                  "  pm.expect(body.fullName).to.eql('Ada Lovelace');",
+                  "});",
+                  "pm.collectionVariables.set('userId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"fullName\": \"Ada Lovelace\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{usersApiUrl}}/api/users"
+          }
+        },
+        {
+          "name": "Get user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('returns the created user', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('userId')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{usersApiUrl}}/api/users/{{userId}}"
+          }
+        },
+        {
+          "name": "List users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('returns a page of users', () => {",
+                  "  pm.expect(body.items).to.be.an('array');",
+                  "  pm.expect(body.totalCount).to.be.at.least(1);",
+                  "  pm.expect(body.page).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{usersApiUrl}}/api/users?page=1&pageSize=10"
+          }
+        },
+        {
+          "name": "Create user - duplicate email (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 409 Conflict', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"fullName\": \"Ada Lovelace\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{usersApiUrl}}/api/users"
+          }
+        },
+        {
+          "name": "Create user - invalid data (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 400 Bad Request', () => pm.response.to.have.status(400));",
+                  "const errors = pm.response.json().errors;",
+                  "pm.test('explains both invalid fields', () => {",
+                  "  pm.expect(errors).to.have.property('email');",
+                  "  pm.expect(errors).to.have.property('fullName');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"not-an-email\",\n  \"fullName\": \"\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{usersApiUrl}}/api/users"
+          }
+        },
+        {
+          "name": "Update user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('saves the new name', () => pm.expect(body.fullName).to.eql('Ada King'));",
+                  "pm.test('sets updatedAtUtc', () => pm.expect(body.updatedAtUtc).to.not.be.null);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Ada King\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{usersApiUrl}}/api/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Delete user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 204 No Content', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{usersApiUrl}}/api/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Get deleted user (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns 404 Not Found', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{usersApiUrl}}/api/users/{{userId}}"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "userEmail", "value": "" },
+    { "key": "userId", "value": "" }
+  ]
+}

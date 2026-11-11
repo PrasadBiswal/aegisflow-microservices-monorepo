@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- Shared settings (target framework, nullable, warnings) come from Directory.Build.props.
+       Package versions come from Directory.Packages.props. -->
+  <PropertyGroup>
+    <RootNamespace>AegisFlow.Users.Api</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Needed only by the 'dotnet ef' tool to create migrations; not shipped in the image. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\libs\AegisFlow.ServiceDefaults\AegisFlow.ServiceDefaults.csproj" />
+  </ItemGroup>
+</Project>

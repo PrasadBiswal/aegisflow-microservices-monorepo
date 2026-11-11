@@ -1,0 +1,33 @@
+name: CI - payments-api
+
+on:
+  push:
+    branches: [ "dev", "main" ]
+    paths:
+      - 'services/payments-api/**'
+      - 'tests/payments-api.Tests/**'
+      - 'libs/**'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'Dockerfile'
+      - '.github/workflows/payments-api.yml'
+      - '.github/workflows/_ci-reusable.yml'
+  pull_request:
+    branches: [ "dev", "main" ]
+    paths:
+      - 'services/payments-api/**'
+      - 'tests/payments-api.Tests/**'
+      - 'libs/**'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'Dockerfile'
+      - '.github/workflows/payments-api.yml'
+      - '.github/workflows/_ci-reusable.yml'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_ci-reusable.yml
+    with:
+      service-name: payments-api

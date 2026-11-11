@@ -1,0 +1,32 @@
+replicaCount: 2
+
+image:
+  repository: "" # Overridden per service in CI/CD or environment values
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 80
+
+
+env:
+  - name: DB_SERVER
+    value: "rds-sqlserver-endpoint-placeholder"
+  - name: DB_USER
+    value: "sa"
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: aegisflow-db-secret
+        key: password
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+probePath: "/health"
