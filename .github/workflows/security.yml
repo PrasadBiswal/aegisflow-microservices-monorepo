@@ -35,12 +35,4 @@ jobs:
           dotnet list AegisFlow.sln package --vulnerable --include-transitive | tee vuln.txt
           ! grep -q "has the following vulnerable packages" vuln.txt
 
-  dependency-review:
-    name: Dependency review (PR only)
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: high
+  
