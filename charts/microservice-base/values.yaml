@@ -1,32 +1,33 @@
-replicaCount: 2
+# Defaults for every service. ArgoCD (gitops/argocd/services-appset.yaml) sets the per-service values.
+
+replicaCount: 1
 
 image:
-  repository: "" # Overridden per service in CI/CD or environment values
+  repository: ""            # required: <account>.dkr.ecr.us-east-1.amazonaws.com/<service>
+  tag: ""                   # git SHA pushed by CI (defaults to appVersion)
   pullPolicy: IfNotPresent
-  tag: "latest"
 
 service:
   type: ClusterIP
   port: 80
 
+database:
+  server: sqlserver         # in-cluster SQL Server Service (or the RDS address when enable_rds = true)
+  name: ""                  # required: UsersDb, CatalogDb, ...
+  user: sa
+  trustServerCertificate: "true"   # in-cluster SQL Server uses a self-signed certificate
+  passwordSecret:
+    name: aegisflow-db-secret
+    key: password
 
-env:
-  - name: DB_SERVER
-    value: "rds-sqlserver-endpoint-placeholder"
-  - name: DB_USER
-    value: "sa"
-  - name: DB_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        name: aegisflow-db-secret
-        key: password
+# Runs "<service> migrate" as a Job before every deploy (ArgoCD PreSync hook).
+migrations:
+  enabled: true
 
 resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
   limits:
     cpu: 500m
-    memory: 512Mi
-  requests:
-    cpu: 100m
-    memory: 128Mi
-
-probePath: "/health"
+    memory: 384Mi

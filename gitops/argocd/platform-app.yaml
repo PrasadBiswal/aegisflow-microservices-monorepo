@@ -1,0 +1,21 @@
+# ArgoCD Application: keeps everything in gitops/platform (SQL Server) in sync with Git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/PrasadBiswal/aegisflow-microservices-monorepo.git
+    targetRevision: dev
+    path: gitops/platform
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: aegisflow
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

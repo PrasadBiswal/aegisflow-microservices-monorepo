@@ -1,0 +1,55 @@
+# ArgoCD ApplicationSet: creates one Application per service from the shared Helm chart.
+# __ACCOUNT_ID__ and __IMAGE_TAG__ are filled in by the runbook at apply time, because the AWS account
+# changes every sandbox session and the image tag is the git SHA that CI pushed.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: aegisflow-services
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - { name: users-api,         db: UsersDb }
+          - { name: catalog-api,       db: CatalogDb }
+          - { name: inventory-api,     db: InventoryDb }
+          - { name: cart-api,          db: CartDb }
+          - { name: orders-api,        db: OrdersDb }
+          - { name: payments-api,      db: PaymentsDb }
+          - { name: shipping-api,      db: ShippingDb }
+          - { name: notifications-api, db: NotificationsDb }
+          - { name: reviews-api,       db: ReviewsDb }
+          - { name: reporting-api,     db: ReportingDb }
+  template:
+    metadata:
+      name: "{{ .name }}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/PrasadBiswal/aegisflow-microservices-monorepo.git
+        targetRevision: dev
+        path: charts/microservice-base
+        helm:
+          releaseName: "{{ .name }}"
+          valuesObject:
+            image:
+              repository: "__ACCOUNT_ID__.dkr.ecr.us-east-1.amazonaws.com/{{ .name }}"
+              tag: "__IMAGE_TAG__"
+            database:
+              name: "{{ .db }}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: aegisflow
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+        retry:
+          limit: 10
+          backoff:
+            duration: 30s
+            maxDuration: 3m
