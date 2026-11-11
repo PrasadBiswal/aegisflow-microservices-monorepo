@@ -4,7 +4,7 @@
 #   docker build --build-arg SERVICE_NAME=orders-api -t aegisflow/orders-api .
 
 # ---------- Build stage: SDK 10 builds the net8.0 service (see global.json) ----------
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 ARG SERVICE_NAME
 RUN test -n "$SERVICE_NAME" || (echo "ERROR: pass --build-arg SERVICE_NAME=<folder name under services/>" >&2 && exit 1)
 WORKDIR /src
