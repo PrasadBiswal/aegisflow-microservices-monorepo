@@ -1,15 +1,25 @@
 version: 2
 updates:
   - package-ecosystem: "nuget"
-    directory: "/"                  # reads Directory.Packages.props
+    directory: "/"                  # reads Directory.Packages.props and .config/dotnet-tools.json
     target-branch: "dev"
     schedule: { interval: "weekly" }
     groups:
       all-nuget: { patterns: ["*"] }   # one PR instead of many
+    ignore:
+      # Major upgrades (e.g. EF Core 8 -> 10) are planned on purpose, not weekly bot PRs.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
   - package-ecosystem: "docker"
     directory: "/"
     target-branch: "dev"
     schedule: { interval: "weekly" }
+    ignore:
+      # Keep the .NET image majors (sdk:10, aspnet:8) in step with global.json and the target framework.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "dev"
