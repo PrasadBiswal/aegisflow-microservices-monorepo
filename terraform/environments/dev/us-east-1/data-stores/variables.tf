@@ -1,5 +1,10 @@
-variable "db_password" {
+variable "state_bucket" {
   type        = string
-  description = "Master password for SQL Server RDS instance"
-  sensitive   = true
+  description = "Terraform state bucket from the bootstrap stack (aegisflow-tfstate-<account-id>)."
+}
+
+variable "enable_rds" {
+  type        = bool
+  default     = false
+  description = "false (sandbox): SQL Server runs as a pod in EKS. true (real account): create RDS SQL Server."
 }

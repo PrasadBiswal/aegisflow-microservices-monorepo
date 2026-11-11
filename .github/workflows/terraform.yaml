@@ -17,7 +17,9 @@ jobs:
       fail-fast: false
       matrix:
         dir:
+          - terraform/environments/dev/bootstrap
           - terraform/environments/dev/global/iam
+          - terraform/environments/dev/us-east-1/networking
           - terraform/environments/dev/us-east-1/applications
           - terraform/environments/dev/us-east-1/data-stores
     steps:

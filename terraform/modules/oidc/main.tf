@@ -1,19 +1,27 @@
-# 1. Create the GitHub OIDC Identity Provider in AWS IAM (if not already globally registered)
+data "aws_caller_identity" "current" {}
+
+# Only one GitHub OIDC provider can exist per AWS account.
 resource "aws_iam_openid_connect_provider" "github" {
+  count           = var.create_oidc_provider ? 1 : 0
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"] # Standard GitHub Actions OIDC thumbprint
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
 }
 
-# 2. Define the IAM Assume Role Trust Policy restricted to your specific repository
-data "aws_iam_policy_document" "github_oidc_trust" {
+locals {
+  provider_arn = var.create_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+
+  # Only workflows running on these branches of this repository can assume the role.
+  subjects = [for branch in var.allowed_branches : "repo:${var.github_org}/${var.repository_name}:ref:refs/heads/${branch}"]
+}
+
+data "aws_iam_policy_document" "trust" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
-    effect  = "Allow"
 
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github.arn]
+      identifiers = [local.provider_arn]
     }
 
     condition {
@@ -25,25 +33,19 @@ data "aws_iam_policy_document" "github_oidc_trust" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:/:*"]
+      values   = local.subjects
     }
   }
 }
 
-# 3. Create the IAM Role that GitHub Actions will assume
-resource "aws_iam_role" "github_actions_role" {
-  name               = "aegisflow-github-actions-role-"
-  assume_role_policy = data.aws_iam_policy_document.github_oidc_trust.json
-
-  tags = {
-    Environment = var.environment
-    ManagedBy   = "Terraform"
-    Project     = "Aegisflow"
-  }
+resource "aws_iam_role" "github_actions" {
+  name                 = var.role_name
+  assume_role_policy   = data.aws_iam_policy_document.trust.json
+  max_session_duration = 3600
 }
 
-# 4. Attach AdministratorAccess (or a scoped enterprise policy) to the role for infrastructure provisioning
-resource "aws_iam_role_policy_attachment" "admin_attachment" {
-  role       = aws_iam_role.github_actions_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+resource "aws_iam_role_policy_attachment" "github_actions" {
+  for_each   = toset(var.policy_arns)
+  role       = aws_iam_role.github_actions.name
+  policy_arn = each.value
 }

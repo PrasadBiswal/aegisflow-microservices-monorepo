@@ -1,43 +1,47 @@
 variable "cluster_name" {
   type        = string
-  description = "The name of the EKS cluster"
+  description = "EKS cluster name."
 }
 
 variable "kubernetes_version" {
   type        = string
-  description = "Desired Kubernetes master version"
-  default     = "1.28"
-}
-
-variable "vpc_id" {
-  type        = string
-  description = "The VPC ID where the EKS cluster will be deployed"
+  default     = null
+  description = "Kubernetes version. null = the current EKS default version."
 }
 
 variable "subnet_ids" {
   type        = list(string)
-  description = "List of subnet IDs for EKS worker nodes and control plane interfaces"
+  description = "Private subnet IDs for the control-plane interfaces and worker nodes."
+}
+
+variable "public_access_cidrs" {
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+  description = "Who can reach the public API endpoint. Restrict to your IP / office range in real accounts."
+}
+
+variable "cluster_log_types" {
+  type        = list(string)
+  default     = ["api", "audit", "authenticator"]
+  description = "Control-plane logs sent to CloudWatch."
 }
 
 variable "node_instance_types" {
-  type        = list(string)
-  description = "EC2 instance types for the EKS managed node group"
-  default     = ["t3.medium"]
+  type    = list(string)
+  default = ["t3.medium"]
 }
 
-variable "min_size" {
-  type        = number
-  description = "Minimum number of worker nodes in the auto-scaling group"
-  default     = 1
+variable "node_desired_size" {
+  type    = number
+  default = 3
 }
 
-variable "max_size" {
-  type        = number
-  description = "Maximum number of worker nodes in the auto-scaling group"
-  default     = 3
+variable "node_min_size" {
+  type    = number
+  default = 2
 }
 
-variable "environment" {
-  type        = string
-  description = "Target deployment environment (dev, staging, prod)"
+variable "node_max_size" {
+  type    = number
+  default = 4
 }
