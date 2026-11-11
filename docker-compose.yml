@@ -1,0 +1,191 @@
+# Local development stack: SQL Server + the 10 AegisFlow services.
+#   Start:  docker compose up --build
+#   Stop:   docker compose down        (add -v to also delete the database volume)
+# For each service, <name>-migrate runs once (creates/updates its database), then <name> starts.
+# Secrets come from .env (copy .env.example to .env and set DB_PASSWORD).
+
+x-dotnet-env: &dotnet-env
+  ASPNETCORE_ENVIRONMENT: Development
+  DB_SERVER: sqlserver
+  DB_USER: sa
+  DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env (see .env.example)}
+  DB_TRUST_SERVER_CERTIFICATE: "true"   # local container uses a self-signed certificate
+
+x-migrate: &migrate                     # one-off step: apply EF Core migrations, then exit
+  command: ["migrate"]
+  networks: [aegisflow-net]
+  depends_on:
+    sqlserver: { condition: service_healthy }
+
+x-api: &api                             # long-running API container
+  networks: [aegisflow-net]
+  restart: unless-stopped
+
+services:
+  sqlserver:
+    # 2019 = version 15.00, the same major version as the RDS module (dev/prod parity).
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: aegisflow-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env (see .env.example)}
+      MSSQL_PID: Express
+    ports:
+      - "1433:1433"   # lets SSMS / Azure Data Studio on your laptop connect
+    volumes:
+      - mssql_data:/var/opt/mssql
+    networks: [aegisflow-net]
+    healthcheck:
+      # Newer images have sqlcmd in mssql-tools18 (-C trusts the local certificate); older ones in mssql-tools.
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -b -Q 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # ---------- users-api :8081 ----------
+  users-api-migrate:
+    <<: *migrate
+    build: &users-build { context: ., args: { SERVICE_NAME: users-api } }
+    image: aegisflow/users-api:local
+    environment: { <<: *dotnet-env, DB_NAME: UsersDb }
+  users-api:
+    <<: *api
+    build: *users-build
+    image: aegisflow/users-api:local
+    environment: { <<: *dotnet-env, DB_NAME: UsersDb }
+    ports: ["8081:8080"]
+    depends_on: { users-api-migrate: { condition: service_completed_successfully } }
+
+  # ---------- catalog-api :8082 ----------
+  catalog-api-migrate:
+    <<: *migrate
+    build: &catalog-build { context: ., args: { SERVICE_NAME: catalog-api } }
+    image: aegisflow/catalog-api:local
+    environment: { <<: *dotnet-env, DB_NAME: CatalogDb }
+  catalog-api:
+    <<: *api
+    build: *catalog-build
+    image: aegisflow/catalog-api:local
+    environment: { <<: *dotnet-env, DB_NAME: CatalogDb }
+    ports: ["8082:8080"]
+    depends_on: { catalog-api-migrate: { condition: service_completed_successfully } }
+
+  # ---------- inventory-api :8083 ----------
+  inventory-api-migrate:
+    <<: *migrate
+    build: &inventory-build { context: ., args: { SERVICE_NAME: inventory-api } }
+    image: aegisflow/inventory-api:local
+    environment: { <<: *dotnet-env, DB_NAME: InventoryDb }
+  inventory-api:
+    <<: *api
+    build: *inventory-build
+    image: aegisflow/inventory-api:local
+    environment: { <<: *dotnet-env, DB_NAME: InventoryDb }
+    ports: ["8083:8080"]
+    depends_on: { inventory-api-migrate: { condition: service_completed_successfully } }
+
+  # ---------- cart-api :8084 ----------
+  cart-api-migrate:
+    <<: *migrate
+    build: &cart-build { context: ., args: { SERVICE_NAME: cart-api } }
+    image: aegisflow/cart-api:local
+    environment: { <<: *dotnet-env, DB_NAME: CartDb }
+  cart-api:
+    <<: *api
+    build: *cart-build
+    image: aegisflow/cart-api:local
+    environment: { <<: *dotnet-env, DB_NAME: CartDb }
+    ports: ["8084:8080"]
+    depends_on: { cart-api-migrate: { condition: service_completed_successfully } }
+
+  # ---------- orders-api :8085 ----------
+  orders-api-migrate:
+    <<: *migrate
+    build: &orders-build { context: ., args: { SERVICE_NAME: orders-api } }
+    image: aegisflow/orders-api:local
+    environment: { <<: *dotnet-env, DB_NAME: OrdersDb }
+  orders-api:
+    <<: *api
+    build: *orders-build
+    image: aegisflow/orders-api:local
+    environment: { <<: *dotnet-env, DB_NAME: OrdersDb }
+    ports: ["8085:8080"]
+    depends_on: { orders-api-migrate: { condition: service_completed_successfully } }
+
+  # ---------- payments-api :8086 ----------
+  payments-api-migrate:
+    <<: *migrate
+    build: &payments-build { context: ., args: { SERVICE_NAME: payments-api } }
+    image: aegisflow/payments-api:local
+    environment: { <<: *dotnet-env, DB_NAME: PaymentsDb }
+  payments-api:
+    <<: *api
+    build: *payments-build
+    image: aegisflow/payments-api:local
+    environment: { <<: *dotnet-env, DB_NAME: PaymentsDb }
+    ports: ["8086:8080"]
+    depends_on: { payments-api-migrate: { condition: service_completed_successfully } }
+
+  # ---------- shipping-api :8087 ----------
+  shipping-api-migrate:
+    <<: *migrate
+    build: &shipping-build { context: ., args: { SERVICE_NAME: shipping-api } }
+    image: aegisflow/shipping-api:local
+    environment: { <<: *dotnet-env, DB_NAME: ShippingDb }
+  shipping-api:
+    <<: *api
+    build: *shipping-build
+    image: aegisflow/shipping-api:local
+    environment: { <<: *dotnet-env, DB_NAME: ShippingDb }
+    ports: ["8087:8080"]
+    depends_on: { shipping-api-migrate: { condition: service_completed_successfully } }
+
+  # ---------- notifications-api :8088 ----------
+  notifications-api-migrate:
+    <<: *migrate
+    build: &notifications-build { context: ., args: { SERVICE_NAME: notifications-api } }
+    image: aegisflow/notifications-api:local
+    environment: { <<: *dotnet-env, DB_NAME: NotificationsDb }
+  notifications-api:
+    <<: *api
+    build: *notifications-build
+    image: aegisflow/notifications-api:local
+    environment: { <<: *dotnet-env, DB_NAME: NotificationsDb }
+    ports: ["8088:8080"]
+    depends_on: { notifications-api-migrate: { condition: service_completed_successfully } }
+
+  # ---------- reviews-api :8089 ----------
+  reviews-api-migrate:
+    <<: *migrate
+    build: &reviews-build { context: ., args: { SERVICE_NAME: reviews-api } }
+    image: aegisflow/reviews-api:local
+    environment: { <<: *dotnet-env, DB_NAME: ReviewsDb }
+  reviews-api:
+    <<: *api
+    build: *reviews-build
+    image: aegisflow/reviews-api:local
+    environment: { <<: *dotnet-env, DB_NAME: ReviewsDb }
+    ports: ["8089:8080"]
+    depends_on: { reviews-api-migrate: { condition: service_completed_successfully } }
+
+  # ---------- reporting-api :8090 ----------
+  reporting-api-migrate:
+    <<: *migrate
+    build: &reporting-build { context: ., args: { SERVICE_NAME: reporting-api } }
+    image: aegisflow/reporting-api:local
+    environment: { <<: *dotnet-env, DB_NAME: ReportingDb }
+  reporting-api:
+    <<: *api
+    build: *reporting-build
+    image: aegisflow/reporting-api:local
+    environment: { <<: *dotnet-env, DB_NAME: ReportingDb }
+    ports: ["8090:8080"]
+    depends_on: { reporting-api-migrate: { condition: service_completed_successfully } }
+
+volumes:
+  mssql_data:
+
+networks:
+  aegisflow-net:
+    driver: bridge
