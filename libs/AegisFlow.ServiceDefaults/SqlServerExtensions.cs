@@ -15,10 +15,11 @@ public static class SqlServerExtensions
         // so tests can swap in another database without setting DB_* variables.
         builder.Services.AddDbContext<TContext>((services, options) =>
         {
-            var configuration = services.GetRequiredService<IConfiguration>();
-            options.UseSqlServer(
-                SqlServerConnection.Build(configuration),
-                sql => sql.EnableRetryOnFailure());
+            // 'dotnet ef' (design time) never connects, so it gets a placeholder and needs no DB_* settings.
+            var connectionString = EF.IsDesignTime
+                ? "Server=localhost;Database=DesignTime;"
+                : SqlServerConnection.Build(services.GetRequiredService<IConfiguration>());
+            options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure());
         });
 
         builder.Services.AddHealthChecks()
