@@ -1,53 +1,33 @@
-name: Enterprise Terraform GitOps
+name: Terraform Checks
 
 on:
-  push:
-    branches: [ "main" ]
-    paths:
-      - 'terraform/**'
   pull_request:
-    branches: [ "main" ]
+    branches: [ "dev", "main" ]
     paths:
       - 'terraform/**'
+      - '.github/workflows/terraform.yaml'
 
 permissions:
-  id-token: write
   contents: read
-  pull-requests: write
 
 jobs:
-  terraform-plan-apply:
+  validate:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        environment: [dev, staging, prod]
-    environment:
-      name: ${{ matrix.environment }}
-      
+        dir:
+          - terraform/environments/dev/global/iam
+          - terraform/environments/dev/us-east-1/applications
+          - terraform/environments/dev/us-east-1/data-stores
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.6.5
-
-      - name: Configure AWS Credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::ACCOUNT_ID:role/aegisflow-github-actions-role
-          aws-region: us-east-1
-
-      - name: Terraform Init
-        working-directory: terraform/environments/${{ matrix.environment }}
-        run: terraform init
-
-      - name: Terraform Plan
-        working-directory: terraform/environments/${{ matrix.environment }}
-        run: terraform plan -no-color
-
-      - name: Terraform Apply (Controlled)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        working-directory: terraform/environments/${{ matrix.environment }}
-        run: terraform apply -auto-approve
+          terraform_version: 1.10.5
+      - name: Format check
+        run: terraform fmt -check -recursive
+        working-directory: terraform
+      - name: Validate (no AWS credentials needed)
+        run: terraform init -backend=false && terraform validate
+        working-directory: ${{ matrix.dir }}

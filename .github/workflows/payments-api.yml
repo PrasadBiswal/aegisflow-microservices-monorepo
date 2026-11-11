@@ -25,6 +25,10 @@ on:
       - 'Dockerfile'
       - '.github/workflows/payments-api.yml'
       - '.github/workflows/_ci-reusable.yml'
+permissions:
+  contents: read
+  id-token: write
+
 
 jobs:
   ci:
