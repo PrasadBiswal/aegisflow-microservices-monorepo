@@ -1,0 +1,40 @@
+# Manual: build and push ALL 10 images to ECR with one tag (the current dev commit).
+# Run once at the start of each sandbox session (ECR is empty in a new account).
+name: Release all images
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/dev' && vars.AWS_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [users-api, catalog-api, inventory-api, cart-api, orders-api,
+                  payments-api, shipping-api, notifications-api, reviews-api, reporting-api]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          build-args: SERVICE_NAME=${{ matrix.service }}
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
