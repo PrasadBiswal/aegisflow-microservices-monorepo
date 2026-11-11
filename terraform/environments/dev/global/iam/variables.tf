@@ -1,10 +1,10 @@
 variable "github_org" {
   type        = string
-  description = "Your GitHub username or organization name"
+  default     = "PrasadBiswal"
+  description = "GitHub user or organization that owns the repository (case-sensitive)."
 }
 
 variable "repository_name" {
-  type        = string
-  description = "The name of your GitHub repository"
-  default     = "aegisflow-microservices-monorepo"
+  type    = string
+  default = "aegisflow-microservices-monorepo"
 }

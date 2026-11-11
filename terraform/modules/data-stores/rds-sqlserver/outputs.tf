@@ -1,9 +1,9 @@
-output "endpoint" {
-  value       = aws_db_instance.sqlserver.endpoint
-  description = "The connection endpoint for the SQL Server instance"
+output "address" {
+  description = "Host name only (no port) - use as DB_SERVER."
+  value       = aws_db_instance.this.address
 }
 
-output "resource_id" {
-  value       = aws_db_instance.sqlserver.resource_id
-  description = "The RDS resource ID"
+output "master_user_secret_arn" {
+  description = "Secrets Manager secret holding the generated admin password."
+  value       = aws_db_instance.this.master_user_secret[0].secret_arn
 }

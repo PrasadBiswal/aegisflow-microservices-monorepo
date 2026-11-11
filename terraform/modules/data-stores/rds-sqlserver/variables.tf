@@ -1,49 +1,75 @@
-variable "environment" {
+variable "identifier" {
   type        = string
-  description = "Deployment environment (e.g., dev, prod)"
-}
-variable "username" {
-  type        = string
-  description = "Master username for SQL Server"
-  default     = "adminuser"
-}
-
-variable "password" {
-  type        = string
-  description = "Master password for SQL Server"
-  sensitive   = true
+  description = "RDS instance name, e.g. aegisflow-dev-sqlserver."
 }
 
 variable "vpc_id" {
-  type        = string
-  description = "VPC ID where RDS will be deployed"
+  type = string
 }
 
 variable "subnet_ids" {
   type        = list(string)
-  description = "List of database subnet IDs"
+  description = "Private subnet IDs."
 }
 
-variable "allowed_cidr_blocks" {
+variable "allowed_security_group_ids" {
   type        = list(string)
-  description = "CIDR blocks allowed to connect to SQL Server"
+  description = "Security groups allowed to connect on port 1433 (e.g. the EKS cluster security group)."
+}
+
+variable "engine" {
+  type        = string
+  default     = "sqlserver-ex"
+  description = "sqlserver-ex (Express, dev) or sqlserver-se (Standard; needed for Multi-AZ in prod)."
+}
+
+variable "engine_version" {
+  type        = string
+  default     = "15.00"
+  description = "15.00 = SQL Server 2019, same as the local Docker Compose image."
 }
 
 variable "instance_class" {
-  type        = string
-  default     = "db.t3.small"
-  description = "RDS instance size"
+  type    = string
+  default = "db.t3.small"
 }
 
 variable "allocated_storage" {
-  type        = number
-  default     = 20
-  description = "Allocated storage in GB"
+  type    = number
+  default = 20
 }
 
-variable "db_name" {
-  type        = string
-  default     = "AegisflowDb"
-  description = "Initial database name"
+variable "max_allocated_storage" {
+  type    = number
+  default = 100
 }
 
+variable "storage_encrypted" {
+  type    = bool
+  default = true
+}
+
+variable "username" {
+  type    = string
+  default = "adminuser"
+}
+
+variable "multi_az" {
+  type    = bool
+  default = false
+}
+
+variable "backup_retention_period" {
+  type    = number
+  default = 1
+}
+
+variable "deletion_protection" {
+  type    = bool
+  default = false
+}
+
+variable "skip_final_snapshot" {
+  type    = bool
+  default = true
+}

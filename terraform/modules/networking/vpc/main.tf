@@ -1,54 +1,104 @@
+data "aws_availability_zones" "available" {
+  state = "available"
+
+  # us-east-1e cannot host EKS control-plane network interfaces.
+  exclude_names = ["us-east-1e"]
+}
+
+locals {
+  name      = "aegisflow-${var.environment}"
+  azs       = slice(data.aws_availability_zones.available.names, 0, var.az_count)
+  nat_count = var.single_nat_gateway ? 1 : var.az_count
+}
+
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
-  tags = { Name = "aegisflow-vpc-Get-ChildItem{var.environment}", Environment = var.environment, ManagedBy = "Terraform" }
+
+  tags = { Name = "${local.name}-vpc" }
 }
-resource "aws_internet_gateway" "igw" {
+
+resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
-  tags = { Name = "aegisflow-igw-Get-ChildItem{var.environment}" }
+  tags   = { Name = "${local.name}-igw" }
 }
+
+# Public subnets: load balancers and NAT gateways.
 resource "aws_subnet" "public" {
-  count                   = length(var.public_subnet_cidrs)
+  count                   = var.az_count
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_cidrs[count.index]
-  availability_zone       = var.availability_zones[count.index]
+  cidr_block              = cidrsubnet(var.vpc_cidr, 8, count.index)
+  availability_zone       = local.azs[count.index]
   map_public_ip_on_launch = true
-  tags = { Name = "aegisflow-public-subnet-Get-ChildItem{var.environment}-Get-ChildItem{count.index}" }
+
+  tags = {
+    Name                                        = "${local.name}-public-${local.azs[count.index]}"
+    "kubernetes.io/role/elb"                    = "1"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+  }
 }
+
+# Private subnets: EKS worker nodes (and RDS when enabled).
 resource "aws_subnet" "private" {
-  count             = length(var.private_subnet_cidrs)
+  count             = var.az_count
   vpc_id            = aws_vpc.main.id
-  cidr_block        = var.private_subnet_cidrs[count.index]
-  availability_zone = var.availability_zones[count.index]
-  tags = { Name = "aegisflow-private-subnet-Get-ChildItem{var.environment}-Get-ChildItem{count.index}" }
+  cidr_block        = cidrsubnet(var.vpc_cidr, 8, count.index + 10)
+  availability_zone = local.azs[count.index]
+
+  tags = {
+    Name                                        = "${local.name}-private-${local.azs[count.index]}"
+    "kubernetes.io/role/internal-elb"           = "1"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+  }
 }
+
 resource "aws_eip" "nat" {
-  domain = "vpc"
-  tags = { Name = "aegisflow-nat-eip-Get-ChildItem{var.environment}" }
+  count      = local.nat_count
+  domain     = "vpc"
+  tags       = { Name = "${local.name}-nat-${count.index}" }
+  depends_on = [aws_internet_gateway.main]
 }
-resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id
-  tags = { Name = "aegisflow-nat-Get-ChildItem{var.environment}" }
+
+resource "aws_nat_gateway" "main" {
+  count         = local.nat_count
+  allocation_id = aws_eip.nat[count.index].id
+  subnet_id     = aws_subnet.public[count.index].id
+  tags          = { Name = "${local.name}-nat-${count.index}" }
+  depends_on    = [aws_internet_gateway.main]
 }
+
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
-  route { cidr_block = "0.0.0.0/0"; gateway_id = aws_internet_gateway.igw.id }
-  tags = { Name = "aegisflow-public-rt-Get-ChildItem{var.environment}" }
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main.id
+  }
+
+  tags = { Name = "${local.name}-public" }
 }
-resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.main.id
-  route { cidr_block = "0.0.0.0/0"; nat_gateway_id = aws_nat_gateway.nat.id }
-  tags = { Name = "aegisflow-private-rt-Get-ChildItem{var.environment}" }
-}
+
 resource "aws_route_table_association" "public" {
-  count          = length(var.public_subnet_cidrs)
+  count          = var.az_count
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
 }
+
+resource "aws_route_table" "private" {
+  count  = var.az_count
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.main[var.single_nat_gateway ? 0 : count.index].id
+  }
+
+  tags = { Name = "${local.name}-private-${count.index}" }
+}
+
 resource "aws_route_table_association" "private" {
-  count          = length(var.private_subnet_cidrs)
+  count          = var.az_count
   subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private.id
+  route_table_id = aws_route_table.private[count.index].id
 }
