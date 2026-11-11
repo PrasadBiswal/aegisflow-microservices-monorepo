@@ -25,7 +25,7 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages,sharing=locked \
       --configuration Release --output /app/publish -p:UseAppHost=false
 
 # ---------- Runtime stage: small image with only the ASP.NET Core 8 runtime ----------
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS runtime
 ARG SERVICE_NAME
 ENV SERVICE_NAME=${SERVICE_NAME}
 LABEL org.opencontainers.image.title="${SERVICE_NAME}" \
