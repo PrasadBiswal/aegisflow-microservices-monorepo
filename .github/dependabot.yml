@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/"                  # reads Directory.Packages.props
+    target-branch: "dev"
+    schedule: { interval: "weekly" }
+    groups:
+      all-nuget: { patterns: ["*"] }   # one PR instead of many
+  - package-ecosystem: "docker"
+    directory: "/"
+    target-branch: "dev"
+    schedule: { interval: "weekly" }
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "dev"
+    schedule: { interval: "weekly" }

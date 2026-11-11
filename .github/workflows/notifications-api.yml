@@ -26,6 +26,10 @@ on:
       - '.github/workflows/notifications-api.yml'
       - '.github/workflows/_ci-reusable.yml'
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   ci:
     uses: ./.github/workflows/_ci-reusable.yml
