@@ -10,7 +10,7 @@ data "aws_iam_policy_document" "cluster_assume" {
 }
 
 resource "aws_iam_role" "cluster" {
-  name               = "${var.cluster_name}-cluster-role"
+  name               = coalesce(var.cluster_role_name, "${var.cluster_name}-cluster-role")
   assume_role_policy = data.aws_iam_policy_document.cluster_assume.json
 }
 
@@ -53,7 +53,7 @@ data "aws_iam_policy_document" "node_assume" {
 }
 
 resource "aws_iam_role" "node" {
-  name               = "${var.cluster_name}-node-role"
+  name               = coalesce(var.node_role_name, "${var.cluster_name}-node-role")
   assume_role_policy = data.aws_iam_policy_document.node_assume.json
 }
 
@@ -68,7 +68,10 @@ resource "aws_iam_role_policy_attachment" "node" {
   policy_arn = each.value
 }
 
+# Managed node group (default). In environments that forbid it, set node_mode = "self_managed"
+# (see self_managed_nodes.tf).
 resource "aws_eks_node_group" "main" {
+  count           = var.node_mode == "managed" ? 1 : 0
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "${var.cluster_name}-nodes"
   node_role_arn   = aws_iam_role.node.arn
