@@ -9,6 +9,35 @@ variable "kubernetes_version" {
   description = "Kubernetes version. null = the current EKS default version."
 }
 
+variable "cluster_role_name" {
+  type        = string
+  default     = null
+  description = "IAM role name for the control plane. null = <cluster_name>-cluster-role. Some sandboxes only allow PassRole for fixed names."
+}
+
+variable "node_role_name" {
+  type        = string
+  default     = null
+  description = "IAM role name for the worker nodes. null = <cluster_name>-node-role."
+}
+
+variable "node_mode" {
+  type        = string
+  default     = "managed"
+  description = "managed = EKS managed node group; self_managed = EC2 Auto Scaling group joined via an access entry."
+
+  validation {
+    condition     = contains(["managed", "self_managed"], var.node_mode)
+    error_message = "node_mode must be \"managed\" or \"self_managed\"."
+  }
+}
+
+variable "node_instance_profile_name" {
+  type        = string
+  default     = null
+  description = "Instance profile name for self-managed nodes. null = <cluster_name>-node-profile."
+}
+
 variable "subnet_ids" {
   type        = list(string)
   description = "Private subnet IDs for the control-plane interfaces and worker nodes."
